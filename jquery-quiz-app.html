@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Application</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .admin-link {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #667eea;
+            font-weight: 500;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .admin-link:hover {
+            background: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .quiz-header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .question-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .question-section {
+            margin-bottom: 30px;
+        }
+
+        .question-text {
+            font-size: 20px;
+            color: #333;
+            font-weight: 500;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .answer-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .answer-option {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .answer-option:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .answer-option.selected {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .answer-option input[type="radio"],
+        .answer-option input[type="checkbox"] {
+            margin-right: 15px;
+            cursor: pointer;
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+        }
+
+        .answer-label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            text-align: center;
+            display: none;
+        }
+
+        .results-section h2 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 20px;
+        }
+
+        .score-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .score-message {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Admin Panel Styles */
+        .admin-panel {
+            display: none;
+        }
+
+        .admin-header {
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .admin-header h2 {
+            color: #333;
+            font-size: 24px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            margin: 20px 0;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .format-guide {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .format-guide h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .format-guide pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .preview-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .preview-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .preview-questions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .preview-question {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .preview-question strong {
+            color: #667eea;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <a href="#" class="admin-link" id="adminToggle">⚙️ Admin Panel</a>
+
+    <div class="quiz-container">
+        <!-- Quiz Section -->
+        <div class="quiz-section">
+            <div class="quiz-header">
+                <h1>Quiz Time!</h1>
+            </div>
+
+            <div class="loading">Loading questions...</div>
+
+            <div class="quiz-content" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                
+                <div class="question-info">
+                    Question <span class="current-question">1</span> of <span class="total-questions">0</span>
+                </div>
+
+                <div class="question-section">
+                    <div class="question-text"></div>
+                </div>
+
+                <div class="answer-section"></div>
+
+                <div class="button-container">
+                    <button class="btn-secondary prev-btn" style="display: none;">Previous</button>
+                    <button class="btn-primary next-btn" disabled>Next Question</button>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h2>Quiz Complete! 🎉</h2>
+                <div class="score-display"></div>
+                <div class="score-message"></div>
+                <button class="btn-primary restart-btn">Restart Quiz</button>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div class="admin-panel">
+            <div class="admin-header">
+                <h2>Admin Panel - Upload Questions</h2>
+            </div>
+
+            <div class="format-guide">
+                <h3>📋 Word Document Format Guide</h3>
+                <pre>For each question, use this format:
+
+Q: What is the capital of France?
+Type: multiple
+A) London
+B) Berlin
+C) Paris
+D) Madrid
+Correct: C
+
+Q: Is JavaScript the same as Java?
+Type: yesno
+Correct: no
+
+Q: The Earth is flat.
+Type: truefalse
+Correct: false</pre>
+                <p style="color: #666; margin-top: 10px; font-size: 14px;">
+                    <strong>Types:</strong> multiple, yesno, truefalse<br>
+                    <strong>For multiple choice:</strong> Use A), B), C), D) format and specify correct letter<br>
+                    <strong>For yes/no:</strong> Correct answer should be "yes" or "no"<br>
+                    <strong>For true/false:</strong> Correct answer should be "true" or "false"
+                </p>
+            </div>
+
+            <div class="upload-section">
+                <h3>Upload Word Document (.docx)</h3>
+                <div class="file-input-wrapper">
+                    <label for="wordFile" class="file-label">Choose File</label>
+                    <input type="file" id="wordFile" accept=".docx">
+                    <div class="file-name" id="fileName">No file chosen</div>
+                </div>
+                <button class="btn-primary" id="parseDoc" disabled>Parse Document</button>
+            </div>
+
+            <div class="preview-section">
+                <h3>Preview Questions (<span id="questionCount">0</span> questions found)</h3>
+                <div class="preview-questions"></div>
+                <div class="admin-actions">
+                    <button class="btn-primary" id="saveQuestions">Save & Use Questions</button>
+                    <button class="btn-secondary" id="downloadJson">Download JSON</button>
+                </div>
+            </div>
+
+            <div class="admin-actions" style="margin-top: 20px;">
+                <button class="btn-secondary" id="backToQuiz">Back to Quiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let questions = [];
+            let parsedQuestions = [];
+            let currentQuestion = 0;
+            let userAnswers = [];
+            let score = 0;
+            let quizTitle = "Quiz Time!";
+
+            // Sample questions
+            const sampleQuestions = [
+                {
+                    "question": "What is the capital of France?",
+                    "type": "multiple",
+                    "options": ["London", "Berlin", "Paris", "Madrid"],
+                    "correctAnswer": 2
+                },
+                {
+                    "question": "Is JavaScript the same as Java?",
+                    "type": "yesno",
+                    "correctAnswer": "no"
+                },
+                {
+                    "question": "The Earth is flat.",
+                    "type": "truefalse",
+                    "correctAnswer": "false"
+                }
+            ];
+
+            // Toggle Admin Panel
+            $('#adminToggle').click(function(e) {
+                e.preventDefault();
+                $('.quiz-section').toggle();
+                $('.admin-panel').toggle();
+            });
+
+            $('#backToQuiz').click(function() {
+                $('.admin-panel').hide();
+                $('.quiz-section').show();
+            });
+
+            // File input handling
+            $('#wordFile').change(function() {
+                const fileName = $(this).val().split('\\').pop();
+                if (fileName) {
+                    $('#fileName').text(fileName);
+                    $('#parseDoc').prop('disabled', false);
+                    // Extract quiz title from filename (remove .docx extension)
+                    quizTitle = fileName.replace(/\.docx$/i, '').replace(/_/g, ' ');
+                } else {
+                    $('#fileName').text('No file chosen');
+                    $('#parseDoc').prop('disabled', true);
+                }
+            });
+
+            // Parse Word Document
+            $('#parseDoc').click(function() {
+                const fileInput = document.getElementById('wordFile');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    alert('Please select a file first');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    
+                    mammoth.extractRawText({arrayBuffer: arrayBuffer})
+                        .then(function(result) {
+                            const text = result.value;
+                            parsedQuestions = parseQuestionsFromText(text);
+                            
+                            if (parsedQuestions.length > 0) {
+                                displayPreview(parsedQuestions);
+                                $('.preview-section').show();
+                            } else {
+                                alert('No questions found. Please check the document format.');
+                            }
+                        })
+                        .catch(function(err) {
+                            alert('Error reading document: ' + err.message);
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            // Parse questions from text
+            function parseQuestionsFromText(text) {
+                const questions = [];
+                const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+                
+                let i = 0;
+                while (i < lines.length) {
+                    const line = lines[i];
+                    
+                    // Look for question starting with Q:
+                    if (line.match(/^Q:/i)) {
+                        const question = {
+                            question: line.replace(/^Q:\s*/i, '').trim(),
+                            type: '',
+                            options: [],
+                            correctAnswer: null
+                        };
+                        
+                        i++;
+                        
+                        // Get type
+                        if (i < lines.length && lines[i].match(/^Type:/i)) {
+                            question.type = lines[i].replace(/^Type:\s*/i, '').trim().toLowerCase();
+                            i++;
+                        }
+                        
+                        // Get options for multiple choice
+                        if (question.type === 'multiple') {
+                            while (i < lines.length && lines[i].match(/^[A-D]\)/i)) {
+                                question.options.push(lines[i].replace(/^[A-D]\)\s*/i, '').trim());
+                                i++;
+                            }
+                        }
+                        
+                        // Get correct answer
+                        if (i < lines.length && lines[i].match(/^Correct:/i)) {
+                            let correctValue = lines[i].replace(/^Correct:\s*/i, '').trim().toLowerCase();
+                            
+                            if (question.type === 'multiple') {
+                                // Check if multiple answers (comma or space separated)
+                                if (correctValue.includes(',') || correctValue.includes(' ')) {
+                                    // Multiple correct answers
+                                    const answers = correctValue.split(/[,\s]+/).filter(a => a);
+                                    const letterMap = {'a': 0, 'b': 1, 'c': 2, 'd': 3};
+                                    question.correctAnswer = answers.map(a => letterMap[a.toLowerCase()]).filter(idx => idx !== undefined);
+                                    question.multipleAnswers = true;
+                                } else {
+                                    // Single correct answer
+                                    const letterMap = {'a': 0, 'b': 1, 'c': 2, 'd': 3};
+                                    question.correctAnswer = letterMap[correctValue] !== undefined ? letterMap[correctValue] : 0;
+                                    question.multipleAnswers = false;
+                                }
+                            } else {
+                                question.correctAnswer = correctValue;
+                                question.multipleAnswers = false;
+                            }
+                            i++;
+                        }
+                        
+                        // Validate question - ensure correctAnswer is set
+                        if (question.type && question.question && question.correctAnswer !== null) {
+                            if (question.type === 'multiple' && question.options.length >= 2 && question.correctAnswer >= 0) {
+                                questions.push(question);
+                            } else if ((question.type === 'yesno' || question.type === 'truefalse') && question.correctAnswer) {
+                                questions.push(question);
+                            }
+                        }
+                    } else {
+                        i++;
+                    }
+                }
+                
+                return questions;
+            }
+
+            // Display preview
+            function displayPreview(questions) {
+                $('.preview-questions').empty();
+                $('#questionCount').text(questions.length);
+                
+                questions.forEach((q, index) => {
+                    let optionsHtml = '';
+                    if (q.type === 'multiple') {
+                        optionsHtml = '<br><strong>Options:</strong> ' + q.options.join(', ');
+                        optionsHtml += '<br><strong>Correct:</strong> ' + q.options[q.correctAnswer];
+                    } else {
+                        optionsHtml = '<br><strong>Correct Answer:</strong> ' + q.correctAnswer;
+                    }
+                    
+                    const html = `
+                        <div class="preview-question">
+                            <strong>Question ${index + 1}:</strong> ${q.question}<br>
+                            <strong>Type:</strong> ${q.type}
+                            ${optionsHtml}
+                        </div>
+                    `;
+                    $('.preview-questions').append(html);
+                });
+            }
+
+            // Save questions
+            $('#saveQuestions').click(function() {
+                questions = parsedQuestions;
+                const jsonStr = JSON.stringify(questions, null, 2);
+                localStorage.setItem('quizQuestions', jsonStr);
+                
+                alert('Questions saved successfully! The quiz will now use these questions.');
+                $('.admin-panel').hide();
+                $('.quiz-section').show();
+                $('.loading').show();
+                $('.quiz-content').hide();
+                $('.results-section').hide();
+                
+                currentQuestion = 0;
+                userAnswers = [];
+                score = 0;
+                
+                initializeQuiz();
+            });
+
+            // Download JSON
+            $('#downloadJson').click(function() {
+                const jsonStr = JSON.stringify(parsedQuestions, null, 2);
+                const blob = new Blob([jsonStr], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'questions.json';
+                a.click();
+            });
+
+            // Load questions
+            function loadQuestions() {
+                // Try localStorage first
+                const savedQuestions = localStorage.getItem('quizQuestions');
+                if (savedQuestions) {
+                    try {
+                        questions = JSON.parse(savedQuestions);
+                        initializeQuiz();
+                        return;
+                    } catch (e) {
+                        console.log('Error parsing saved questions');
+                    }
+                }
+                
+                // Use sample questions
+                questions = sampleQuestions;
+                initializeQuiz();
+            }
+
+            function initializeQuiz() {
+                if (questions.length === 0) {
+                    $('.loading').html('<div class="error">No questions available. Please use the Admin Panel to upload questions.</div>');
+                    return;
+                }
+
+                $('.loading').hide();
+                $('.quiz-content').show();
+                $('.total-questions').text(questions.length);
+                displayQuestion();
+            }
+
+            function displayQuestion() {
+                const question = questions[currentQuestion];
+                
+                const progress = ((currentQuestion + 1) / questions.length) * 100;
+                $('.progress-fill').css('width', progress + '%');
+                $('.current-question').text(currentQuestion + 1);
+
+                $('.question-text').text(question.question);
+                $('.answer-section').empty();
+
+                if (question.type === 'multiple') {
+                    displayMultipleChoice(question.options);
+                } else if (question.type === 'yesno') {
+                    displayYesNo();
+                } else if (question.type === 'truefalse') {
+                    displayTrueFalse();
+                }
+
+                if (userAnswers[currentQuestion] !== undefined) {
+                    $('input[value="' + userAnswers[currentQuestion] + '"]').prop('checked', true);
+                    $('input[value="' + userAnswers[currentQuestion] + '"]').closest('.answer-option').addClass('selected');
+                    $('.next-btn').prop('disabled', false);
+                }
+
+                if (currentQuestion === 0) {
+                    $('.prev-btn').hide();
+                } else {
+                    $('.prev-btn').show();
+                }
+
+                if (currentQuestion === questions.length - 1) {
+                    $('.next-btn').text('Submit Quiz');
+                } else {
+                    $('.next-btn').text('Next Question');
+                }
+            }
+
+            function displayMultipleChoice(options) {
+                options.forEach((option, index) => {
+                    const optionHtml = `
+                        <div class="answer-option">
+                            <input type="radio" name="answer" value="${index}" id="option${index}">
+                            <label class="answer-label" for="option${index}">${option}</label>
+                        </div>
+                    `;
+                    $('.answer-section').append(optionHtml);
+                });
+            }
+
+            function displayYesNo() {
+                const options = ['yes', 'no'];
+                options.forEach((option) => {
+                    const optionHtml = `
+                        <div class="answer-option">
+                            <input type="radio" name="answer" value="${option}" id="option${option}">
+                            <label class="answer-label" for="option${option}">${option.charAt(0).toUpperCase() + option.slice(1)}</label>
+                        </div>
+                    `;
+                    $('.answer-section').append(optionHtml);
+                });
+            }
+
+            function displayTrueFalse() {
+                const options = ['true', 'false'];
+                options.forEach((option) => {
+                    const optionHtml = `
+                        <div class="answer-option">
+                            <input type="radio" name="answer" value="${option}" id="option${option}">
+                            <label class="answer-label" for="option${option}">${option.charAt(0).toUpperCase() + option.slice(1)}</label>
+                        </div>
+                    `;
+                    $('.answer-section').append(optionHtml);
+                });
+            }
+
+            $(document).on('click', '.answer-option', function() {
+                $('.answer-option').removeClass('selected');
+                $(this).addClass('selected');
+                $(this).find('input').prop('checked', true);
+                $('.next-btn').prop('disabled', false);
+            });
+
+            $('.next-btn').click(function() {
+                const selectedAnswer = $('input[name="answer"]:checked').val();
+                
+                if (selectedAnswer !== undefined) {
+                    userAnswers[currentQuestion] = selectedAnswer;
+                    
+                    if (currentQuestion < questions.length - 1) {
+                        currentQuestion++;
+                        displayQuestion();
+                        $('.next-btn').prop('disabled', true);
+                    } else {
+                        calculateScore();
+                        showResults();
+                    }
+                }
+            });
+
+            $('.prev-btn').click(function() {
+                if (currentQuestion > 0) {
+                    currentQuestion--;
+                    displayQuestion();
+                }
+            });
+
+            function calculateScore() {
+                score = 0;
+                questions.forEach((question, index) => {
+                    const userAnswer = userAnswers[index];
+                    
+                    // Skip if question doesn't have a correct answer defined
+                    if (question.correctAnswer === null || question.correctAnswer === undefined) {
+                        return;
+                    }
+                    
+                    let correctAnswer;
+
+                    if (question.type === 'multiple') {
+                        correctAnswer = question.correctAnswer.toString();
+                    } else {
+                        correctAnswer = question.correctAnswer.toString();
+                    }
+
+                    if (userAnswer == correctAnswer) {
+                        score++;
+                    }
+                });
+            }
+
+            function showResults() {
+                $('.quiz-content').hide();
+                $('.results-section').show();
+
+                const percentage = Math.round((score / questions.length) * 100);
+                $('.score-display').text(score + ' / ' + questions.length);
+                
+                let message = '';
+                if (percentage >= 90) {
+                    message = 'Outstanding! You\'re a quiz master! 🌟';
+                } else if (percentage >= 70) {
+                    message = 'Great job! You did really well! 👏';
+                } else if (percentage >= 50) {
+                    message = 'Good effort! Keep practicing! 💪';
+                } else {
+                    message = 'Don\'t give up! Try again! 📚';
+                }
+                
+                $('.score-message').text(message + ' You scored ' + percentage + '%');
+            }
+
+            $('.restart-btn').click(function() {
+                currentQuestion = 0;
+                userAnswers = [];
+                score = 0;
+                $('.results-section').hide();
+                $('.quiz-content').show();
+                displayQuestion();
+                $('.next-btn').prop('disabled', true);
+            });
+
+            loadQuestions();
+        });
+    </script>
+</body>
+</html>
